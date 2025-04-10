@@ -63,16 +63,12 @@ stop_forward_dnsmasq()
 
 set_iptable()
 {
-	section=$(uci add firewall redirect)
-	if [ -z "$section" ]; then
-		echo "failed to add redirect rule."
-		exit 1
-	fi
-	uci set firewall.$section.target="DNAT"
-	uci set firewall.$section.name="AdGuard Home"
-	uci set firewall.$section.src="lan"
-	uci set firewall.$section.src_dport="53"
-	uci set firewall.$section.dest_port="$AdGuardHome_PORT"
+	uci set firewall.adguardhome_redirect="redirect"
+	uci set firewall.adguardhome_redirect.target="DNAT"
+	uci set firewall.adguardhome_redirect.name="AdGuard Home"
+	uci set firewall.adguardhome_redirect.src="lan"
+	uci set firewall.adguardhome_redirect.src_dport="53"
+	uci set firewall.adguardhome_redirect.dest_port="$AdGuardHome_PORT"
 	uci commit firewall
 	/etc/init.d/firewall reload
 	echo "firewall rules updated."
@@ -80,17 +76,14 @@ set_iptable()
 
 clear_iptable()
 {
-	redirects=$(uci show firewall | grep "AdGuard Home" | awk -F".name" '{print $1}')
+	redirects=$(uci show firewall | grep "firewall.adguardhome_redirect")
 	if [ -z "$redirects" ]; then
 		echo "no redirect rules found."
 	else
-		for redirect in $redirects; do
-			uci delete $redirect
-			echo "deleted redirect rule: $redirect"
-		done
+		uci delete firewall.adguardhome_redirect
 		uci commit firewall
 		/etc/init.d/firewall reload
-		echo "firewall rules updated."
+		echo "deleted redirect rule: firewall.adguardhome_redirect"
 	fi
 }
 
