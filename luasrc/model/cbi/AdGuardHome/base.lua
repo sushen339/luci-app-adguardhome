@@ -53,16 +53,15 @@ o.showfastconfig=(not fs.access(configpath))
 o.description=string.format(translate("core version:").."<strong><font id=\"updateversion\" color=\"green\">%s </font></strong>",e)
 ---- port warning not safe
 local port=luci.sys.exec("awk '/  port:/{printf($2);exit;}' "..configpath.." 2>nul")
-if (port=="") then port="?" end
+if (port=="") then port=translate("unknown") end
 ---- Redirect
-o = s:option(ListValue, "redirect", port..translate("Redirect"), translate("AdGuardHome redirect mode"))
-o.placeholder = "none"
+o = s:option(ListValue, "redirect", translate("Redirect").." ("..translate("Port").." "..port..")", translate("AdGuardHome redirect mode"))
 o:value("none", translate("none"))
 o:value("dnsmasq-upstream", translate("Run as dnsmasq upstream server"))
 o:value("redirect", translate("Redirect 53 port to AdGuardHome"))
 o:value("exchange", translate("Use port 53 replace dnsmasq"))
 o.default     = "none"
-o.optional = true
+o.optional = false
 ---- bin path
 o = s:option(Value, "binpath", translate("Bin Path"), translate("AdGuardHome Bin path if no bin will auto download"))
 o.default     = "/usr/bin/AdGuardHome/AdGuardHome"
@@ -85,7 +84,7 @@ end
 return value
 end
 --- arch
-o = s:option(ListValue, "arch", translate("choose Arch for download"))
+o = s:option(ListValue, "arch", translate("Choose Arch for download"))
 o:value("",translate("Auto"))
 o:value("386",translate("i386"))
 o:value("amd64",translate("x86_64"))
@@ -103,7 +102,7 @@ o.default=""
 o.rmempty=true
 
 --- upx
-o = s:option(ListValue, "upxflag", translate("use upx to compress bin after download"))
+o = s:option(ListValue, "upxflag", translate("Use upx to compress bin after download"))
 o:value("", translate("none"))
 o:value("-1", translate("compress faster"))
 o:value("-9", translate("compress better"))

@@ -69,6 +69,9 @@ msgstr "没有核心"
 msgid "Redirect"
 msgstr "重定向"
 
+msgid "Port"
+msgstr "端口"
+
 #inlist
 msgid "none"
 msgstr "无"
@@ -91,13 +94,13 @@ msgstr "执行文件路径"
 msgid "AdGuardHome Bin path if no bin will auto download"
 msgstr "AdGuardHome 执行文件路径 如果没有执行文件将自动下载"
 
-msgid "choose Arch for download"
+msgid "Choose Arch for download"
 msgstr "要下载的程序架构"
 
 msgid "Need to save to config first before downloading."
 msgstr "手动下载前如该选项有变更需先保存并应用后再点下载。"
 
-msgid "use upx to compress bin after download"
+msgid "Use upx to compress bin after download"
 msgstr "下载后使用upx压缩执行文件"
 
 #inlist
