@@ -19,6 +19,19 @@ define Package/$(PKG_NAME)/conffiles
 /etc/config/AdGuardHome
 endef
 
+define Package/$(PKG_NAME)/preinst
+#!/bin/sh
+	uci -q batch <<-EOF >/dev/null 2>&1
+		delete ucitrack.@AdGuardHome[-1]
+		add ucitrack AdGuardHome
+		set ucitrack.@AdGuardHome[-1].init=AdGuardHome
+		commit ucitrack
+		delete AdGuardHome.AdGuardHome.ucitracktest
+	EOF
+	rm -f /tmp/luci-indexcache
+exit 0
+endef
+
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 	/etc/init.d/AdGuardHome enable >/dev/null 2>&1
