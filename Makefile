@@ -47,8 +47,6 @@ endef
 define Package/$(PKG_NAME)/prerm
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-     /etc/init.d/AdGuardHome disable
-     /etc/init.d/AdGuardHome stop >/dev/null 2>&1
 uci -q batch <<-EOF >/dev/null 2>&1
 	delete ucitrack.@AdGuardHome[-1]
 	commit ucitrack
