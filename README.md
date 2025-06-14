@@ -1,78 +1,76 @@
 # luci-app-adguardhome
 
-Advanced OpenWrt LuCI app for AdGuard Home
+高级 OpenWrt AdGuard Home LuCI 界面应用
 
-[中文README](README.CN.md)
+[English README](README.EN.md)
 
-Download `.ipk` from [Releases](https://github.com/stevenjoezhang/luci-app-adguardhome/releases)
+## 功能特点
 
-## Features
+- 支持管理 AdGuard Home 的服务端口
+- 在 LuCI 界面中下载/更新核心（支持自定义 URL 下载）
+  - 对于 `.tar.gz` 文件，其文件结构需要与官方保持一致
+  - 或者直接使用主程序二进制文件
+- 使用 `upx` 压缩核心（依赖 `xz`，脚本会自动下载，如果 `opkg` 源无法连接，请在编译时包含此软件包）
+- DNS 重定向方式：
+  - 作为 `dnsmasq` 的上游
+  - 将 53 端口重定向到 AdGuard Home
+  - 用 53 端口替换 `dnsmasq`
+- 自定义选项：
+  - 自定义可执行文件路径（支持 `/tmp`，重启后自动重新下载）
+  - 自定义配置文件路径
+  - 自定义工作目录
+  - 自定义运行日志路径
+- GFWList 查询特定 DNS 服务器。另可参考 [luci-app-autoipsetadder](https://github.com/rufengsuixing/luci-app-autoipsetadder)
+- 支持修改 AdGuard Home 服务登录密码
+- 正序/倒序查看/删除/备份每 3 秒更新的运行日志 + 本地浏览器时区转换
+- 支持手动修改 AdGuard Home 配置：
+  - 支持 YAML 编辑器
+  - 提供快速配置模板
+- 系统升级时保留勾选文件
+- 开机启动后等待网络连接自动重启 AdGuard Home（3 分钟超时，主要防止过滤器更新失败）
+- 关机时备份勾选的工作目录中的文件（注意：IPK 更新时也会触发备份）
+- 计划任务（以下为默认值，时间和参数可在计划任务中调整）：
+  - 自动更新核心（谨慎使用）- 每天 `3:30`
+  - 自动截断查询日志（每小时，限制为 2000 行）
+  - 自动截断运行日志（每天 `3:30`，限制为 2000 行）
+  - 自动更新 IPv6 主机并重启 AdGuard Home（每小时，无更新则不重启）
+  - 自动更新 GFW 列表并重启 AdGuard Home（每天 `3:30`，无更新则不重启）
 
-- AdGuard Home service port management
-- Download/update core in LuCI interface (supports custom URL download)
-  - For `.tar.gz` files, the file structure must match the official one
-  - Or directly use the main program binary
-- Compress core with `upx` (`xz` dependency, the script will auto download if needed. If `opkg` source can't connect, please include this package during compilation)
-- DNS redirection methods:
-  - As the upstream of `dnsmasq` (IP in AdGuard Home statistics will show as `127.0.0.1`, unable to track clients and adjust settings accordingly, `ssr-plus` works normally)
-  - Redirect port 53 to AdGuard Home (IPv6 needs additional IPv6 NAT redirect, or if client uses IPv6 the redirect may be invalid; `ssr-plus` will fail if not using `dnsmasq` as upstream)
-  - Replace `dnsmasq` with port 53 (needs AdGuard Home configuration with `dnsip=0.0.0.0`, ports of `dnsmasq` and AdGuard Home will be exchanged, `ssr-plus` will fail if not using `dnsmasq` as upstream)
-- Customization options:
-  - Customize executable file path (supports `/tmp`, auto redownload after reboot)
-  - Customize config file path
-  - Customize work directory
-  - Customize runtime log path
-- GFWList query to specific DNS server. Also check out [luci-app-autoipsetadder](https://github.com/rufengsuixing/luci-app-autoipsetadder)
-- Modify AdGuard Home login password
-- View/delete/backup runtime log in positive/reverse order with 3-second updates + local browser timezone conversion
-- Manual configuration:
-  - YAML editor support
-  - Templates for fast configuration
-- File preservation during system upgrades
-- Waits for network access at boot (3min timeout, mainly to prevent filter update failure)
-- Workdir backup on shutdown (Note: backup also triggers during IPK updates)
-- Scheduled tasks (default values, time and parameters adjustable in scheduler):
-  - Auto update core (use with caution) - `3:30/day`
-  - Auto truncate query log (hourly, limit to 2000 lines)
-  - Auto truncate runtime log (`3:30/day`, limit to 2000 lines)
-  - Auto update IPv6 hosts and restart AdGuard Home (hourly, no restart if no updates)
-  - Auto update GFW list and restart AdGuard Home (`3:30/day`, no restart if no updates)
+## 已知问题
 
-## Known Issues
+- `db` 数据库不支持放在不支持 `mmap` 的文件系统，如 `jffs2` 和 `data-stk-oo`。请修改工作目录；若检测到 `jffs2`，本插件会自动将数据库软链接到 `/tmp`，但重启后将丢失 DNS 数据库
+- 如发现大量来自 `127.0.0.1` 的 localhost 查询，问题原因可能是 DDNS 插件。如不使用 DDNS，请移除或注释 `/etc/hotplug.d/iface/95-ddns`。对于其他来自本地机器的异常查询，高级用户可使用 [kmod-plog-port](https://github.com/rufengsuixing/kmod-plog-port) 进行诊断
 
-- Database doesn't support filesystems that don't support `mmap` (such as `jffs2` and `data-stk-oo`). Please modify work directory; if `jffs2` is detected, the app will automatically create soft links (`ln`) for the databases to `/tmp`, but DNS database will be lost after reboot
-- If you find many localhost queries from `127.0.0.1`, the DDNS plugin might be the cause. If you don't use DDNS, please remove or comment out `/etc/hotplug.d/iface/95-ddns`. For other abnormal queries from the local machine, advanced users can use [kmod-plog-port](https://github.com/rufengsuixing/kmod-plog-port) to diagnose
+## 使用方法
 
-## Usage
+- 下载发布版，用 `opkg` 安装
+- 或在编译 OpenWrt 时，将代码克隆到软件包路径并设为 `y` 或 `m`
 
-- Download release and install with `opkg`
-- Or when building OpenWrt, clone the code to package path and set as `y` or `m`
+## 关于压缩
 
-## About Compression
+在 `jffs2` 压缩文件系统上使用 `upx` 压缩的内存和空间使用情况（单位：KB，使用最佳压缩）：
 
-Memory and space usage when using `upx` compression on the `jffs2` compressed filesystem (unit: KB, using best compression):
+**文件大小**：
+- 源文件：`14112` → `upx` 压缩后：`5309`
+- 实际使用：`6260` → `upx` 压缩后：`5324`（差值：`936`）
 
-**File size**:
-- Source file: `14112` → After `upx` compression: `5309`
-- Actual usage: `6260` → After `upx` compression: `5324` (Difference: `936`)
+**VmRSS 内存使用**：
+- 不压缩：`14380` → `upx` 压缩后：`18496`（差值：`-4116`）
 
-**VmRSS memory usage**:
-- Without compression: `14380` → After `upx` compression: `18496` (Difference: `-4116`)
+对于压缩文件系统，压缩效益存在但不显著。  
+对于非压缩文件系统，性价比相当高。  
+压缩是用 RAM 换取 ROM 空间 - 如认为值得则启用。
 
-For compressed filesystems, compression benefits exist but aren't significant.  
-For non-compressed filesystems, the performance-to-cost ratio is quite high.  
-Compression trades RAM for ROM space - enable it if you consider it worthwhile.
+## SSR 组合方法
 
-## SSR Combination Methods
+1. **GFW 代理**：DNS 重定向 - 作为 `dnsmasq` 的上游服务器
+2. **GFW 代理**：手动设置 AdGuard Home 上游 DNS 为 `127.0.0.1:[监听端口]`，然后使用 DNS 重定向 - 用 53 端口替换 `dnsmasq`（端口交换后，`dnsmasq` 成为上游）
+3. **国外 IP 代理**：任何重定向方法 - 将 GFW 列表添加到 AdGuard Home，启用计划任务定期更新 GFW
+4. **GFW 代理**：DNS 重定向 - 将 53 端口重定向到 AdGuard Home，设置 AdGuard Home 上游 DNS 为 `127.0.0.1:53`
 
-1. **GFW Proxy**: DNS redirect - as `dnsmasq`'s upstream server
-2. **GFW Proxy**: Manually set AdGuard Home upstream DNS to `127.0.0.1:[your listening port]`, then use DNS redirect - use port 53 to replace `dnsmasq` (after port exchange, `dnsmasq` becomes the upstream)
-3. **Foreign IP Proxy**: Any redirect method - add GFW list to AdGuard Home, enable scheduled task to update GFW regularly
-4. **GFW Proxy**: DNS redirect - redirect port 53 to AdGuard Home, set AdGuard Home upstream DNS to `127.0.0.1:53`
+## 截图
 
-## Screenshots
-
-Example in zh-cn:  
+中文界面示例：  
 ![Screenshot_2019-12-23 newifi-d1 - 基础设置 - LuCI](https://user-images.githubusercontent.com/22387141/71361626-81d60900-25ce-11ea-91d5-ac4e35d5c41e.png)
 ![图片](https://user-images.githubusercontent.com/22387141/71361650-90242500-25ce-11ea-9727-9306a3da1357.png)
 ![Screenshot_2019-12-23 newifi-d1 - 日志 - LuCI(1)](https://user-images.githubusercontent.com/22387141/71361700-b944b580-25ce-11ea-8562-f68c28952b2b.png)
