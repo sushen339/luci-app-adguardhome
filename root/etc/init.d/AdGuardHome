@@ -63,12 +63,17 @@ stop_forward_dnsmasq()
 
 set_iptable()
 {
-	uci set firewall.adguardhome_redirect="redirect"
-	uci set firewall.adguardhome_redirect.target="DNAT"
-	uci set firewall.adguardhome_redirect.name="AdGuard Home"
-	uci set firewall.adguardhome_redirect.src="lan"
-	uci set firewall.adguardhome_redirect.src_dport="53"
-	uci set firewall.adguardhome_redirect.dest_port="$AdGuardHome_PORT"
+	section=$(uci add firewall redirect)
+	if [ -z "$section" ]; then
+		echo "failed to add redirect rule."
+		exit 1
+	fi
+	uci -q set firewall.$section.target="DNAT"
+	uci -q set firewall.$section.name="AdGuard Home"
+	uci -q set firewall.$section.family='any'
+	uci -q set firewall.$section.src="lan"
+	uci -q set firewall.$section.src_dport="53"
+	uci -q set firewall.$section.dest_port="$AdGuardHome_PORT"
 	uci commit firewall
 	/etc/init.d/firewall reload
 	echo "firewall rules updated."
@@ -76,14 +81,19 @@ set_iptable()
 
 clear_iptable()
 {
-	redirects=$(uci show firewall | grep "firewall.adguardhome_redirect")
+	redirects=$(uci show firewall | grep "\.name='AdGuard Home'")
 	if [ -z "$redirects" ]; then
 		echo "no redirect rules found."
 	else
-		uci delete firewall.adguardhome_redirect
-		uci commit firewall
-		/etc/init.d/firewall reload
-		echo "deleted redirect rule: firewall.adguardhome_redirect"
+		section=$(echo "$redirects" | head -n1 | cut -d. -f2 | cut -d= -f1)
+		if [ -n "$section" ]; then
+			uci delete firewall.$section
+			uci commit firewall
+			/etc/init.d/firewall reload
+			echo "deleted redirect rule: firewall.$section"
+		else
+			echo "no valid redirect rule found."
+		fi
 	fi
 }
 
@@ -99,9 +109,9 @@ local r=$?
 return $r
 }
 _isrunning(){
-	config_get binpath $CONFIGURATION binpath "/usr/bin/AdGuardHome/AdGuardHome"
+	config_get binpath $CONFIGURATION binpath "/etc/AdGuardHome/AdGuardHome"
 	[ ! -f "$binpath" ] && return 2
-	pgrep $binpath 2>&1 >/dev/null && return 0
+	pgrep -f "$binpath" >/dev/null 2>&1 && return 0
 	return 1
 }
 force_reload(){
@@ -188,7 +198,7 @@ _do_redirect()
 	else
 		echo -n "0">/var/run/AdGredir
 	fi
-	config_get configpath $CONFIGURATION configpath "/etc/AdGuardHome.yaml"
+	config_get configpath $CONFIGURATION configpath "/etc/AdGuardHome/AdGuardHome.yaml"
 	AdGuardHome_PORT=$(config_editor "dns.port" "" "$configpath" "1")
 	if [ -z "$AdGuardHome_PORT" ]; then
 		AdGuardHome_PORT="0"
@@ -306,7 +316,7 @@ boot_service() {
 	config_load "${CONFIGURATION}"
 	config_get waitonboot $CONFIGURATION waitonboot "0"
 	config_get_bool enabled $CONFIGURATION enabled 0
-	config_get binpath $CONFIGURATION binpath "/usr/bin/AdGuardHome/AdGuardHome"
+	config_get binpath $CONFIGURATION binpath "/etc/AdGuardHome/AdGuardHome"
 	[ -f "$binpath" ] && start_service
 	if [ "$enabled" == "1" ] && [ "$waitonboot" == "1" ]; then
 		procd_open_instance "waitnet"
@@ -326,14 +336,14 @@ testbackup(){
 }
 restore()
 {
-	config_get workdir $CONFIGURATION workdir "/usr/bin/AdGuardHome"
-	config_get backupwdpath $CONFIGURATION backupwdpath "/usr/bin/AdGuardHome"
+	config_get workdir $CONFIGURATION workdir "/etc/AdGuardHome"
+	config_get backupwdpath $CONFIGURATION backupwdpath "/etc/AdGuardHome"
 	cp -u -r -f $backupwdpath/data $workdir
 }
 backup() {
-	config_get backupwdpath $CONFIGURATION backupwdpath "/usr/bin/AdGuardHome"
+	config_get backupwdpath $CONFIGURATION backupwdpath "/etc/AdGuardHome"
 	mkdir -p $backupwdpath/data
-	config_get workdir $CONFIGURATION workdir "/usr/bin/AdGuardHome"
+	config_get workdir $CONFIGURATION workdir "/etc/AdGuardHome"
 	config_get backupfile $CONFIGURATION backupfile ""
 	for one in $backupfile;
 	do
@@ -363,7 +373,7 @@ start_service() {
 	config_load "${CONFIGURATION}"
 	# update password
 	config_get hashpass $CONFIGURATION hashpass ""
-	config_get configpath $CONFIGURATION configpath "/etc/AdGuardHome.yaml"
+	config_get configpath $CONFIGURATION configpath "/etc/AdGuardHome/AdGuardHome.yaml"
 	if [ -n "$hashpass" ]; then
 		config_editor "users.password" "$hashpass" "$configpath"
 		uci set $CONFIGURATION.$CONFIGURATION.hashpass=""
@@ -378,7 +388,7 @@ start_service() {
 		return
 	fi
 	#what need to do before reload
-	config_get workdir $CONFIGURATION workdir "/usr/bin/AdGuardHome"
+	config_get workdir $CONFIGURATION workdir "/etc/AdGuardHome"
 	grep -q "ipset.txt" $configpath 2>/dev/null && ipst=1
 	if [ $ipst -eq 1 ];then
 		ipset list $GFWSET >/dev/null 2>&1 || ipset create $GFWSET hash:ip 2>/dev/null
@@ -407,13 +417,15 @@ start_service() {
 		fi
 	fi
 	local ADDITIONAL_ARGS=""
-	config_get binpath $CONFIGURATION binpath "/usr/bin/AdGuardHome/AdGuardHome"
+	config_get binpath $CONFIGURATION binpath "/etc/AdGuardHome/AdGuardHome"
 
 	mkdir -p ${binpath%/*}
 	ADDITIONAL_ARGS="$ADDITIONAL_ARGS -c $configpath"
 	ADDITIONAL_ARGS="$ADDITIONAL_ARGS -w $workdir"
 	config_get httpport $CONFIGURATION httpport 3000
 	ADDITIONAL_ARGS="$ADDITIONAL_ARGS -p $httpport"
+	# 不检查更新
+	ADDITIONAL_ARGS="$ADDITIONAL_ARGS --no-check-update"
 
 	# hack to save config file when upgrade system
 	config_get upprotect $CONFIGURATION upprotect ""
@@ -424,10 +436,9 @@ start_service() {
 	if [ -n "$logfile" ]; then
 		ADDITIONAL_ARGS="$ADDITIONAL_ARGS -l $logfile"
 	fi
-
 	if [ ! -f "$binpath" ]; then
 		_do_redirect 0
-		/usr/share/AdGuardHome/update_core.sh 2>&1 >/tmp/AdGuardHome_update.log &
+		/usr/share/AdGuardHome/update_core.sh >/tmp/AdGuardHome_update.log 2>&1 &
 		exit 0
 	fi
 
@@ -461,7 +472,7 @@ start_service() {
 	fi
 	echo "AdGuardHome service enabled"
 	echo "luci enable switch=$enabled"
-	(sleep 10 && [ -z "$(pgrep $binpath)" ] && logger "AdGuardHome" "no process in 10s cancel redirect" && _do_redirect 0 )&
+	(sleep 10 && ! pgrep -f "$binpath" >/dev/null 2>&1 && logger "AdGuardHome" "no process in 10s cancel redirect" && _do_redirect 0 )&
 }
 reload_service()
 {
@@ -521,9 +532,9 @@ do_crontab(){
 	default="30 3 * * * /usr/share/AdGuardHome/update_core.sh 2>&1"
 	[ "$enabled" == "0" ] || [ "${crontab//autoupdate/}" == "$crontab" ] && cronenable=0 || cronenable=1
 	crontab_editor
-	
-	config_get workdir $CONFIGURATION workdir "/usr/bin/AdGuardHome"
-	config_get lastworkdir $CONFIGURATION lastworkdir "/usr/bin/AdGuardHome"
+
+	config_get workdir $CONFIGURATION workdir "/etc/AdGuardHome"
+	config_get lastworkdir $CONFIGURATION lastworkdir "/etc/AdGuardHome"
 	findstr="/usr/share/AdGuardHome/tailto.sh [0-9]* \$(uci get AdGuardHome.AdGuardHome.workdir)/data/querylog.json"
 	#[ -n "$lastworkdir" ] && findstr="/usr/share/AdGuardHome/tailto.sh [0-9]* $lastworkdir/data/querylog.json" && [ "$lastworkdir" != "$workdir" ] && replace="${lastworkdir//\//\\/}/${workdir//\//\\/}"
 	default="0 * * * * /usr/share/AdGuardHome/tailto.sh 2000 \$(uci get AdGuardHome.AdGuardHome.workdir)/data/querylog.json"
