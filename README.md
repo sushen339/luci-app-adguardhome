@@ -61,12 +61,10 @@
 对于非压缩文件系统，性价比相当高。  
 压缩是用 RAM 换取 ROM 空间 - 如认为值得则启用。
 
-## SSR 组合方法
+## 代理组合方法
 
-1. **GFW 代理**：DNS 重定向 - 作为 `dnsmasq` 的上游服务器
-2. **GFW 代理**：手动设置 AdGuard Home 上游 DNS 为 `127.0.0.1:[监听端口]`，然后使用 DNS 重定向 - 用 53 端口替换 `dnsmasq`（端口交换后，`dnsmasq` 成为上游）
-3. **国外 IP 代理**：任何重定向方法 - 将 GFW 列表添加到 AdGuard Home，启用计划任务定期更新 GFW
-4. **GFW 代理**：DNS 重定向 - 将 53 端口重定向到 AdGuard Home，设置 AdGuard Home 上游 DNS 为 `127.0.0.1:53`
+ - 将 53 端口重定向到 AdGuard Home，配置 AdGuard Home [FAK-DNS](https://github.com/Leev1s/FAK-DNS) 且修改列表前两行的 DNS 为 `代理软件` 的 DNS。
+ - 代理软件开启 `绕过大陆` ,即可完整体验分流与广告拦截。
 
 ## 截图
 
