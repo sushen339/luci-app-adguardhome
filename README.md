@@ -64,7 +64,7 @@
 ## 代理组合方法
 
  - 将 53 端口重定向到 AdGuard Home，配置 AdGuard Home [FAK-DNS](https://github.com/Leev1s/FAK-DNS) 且修改列表前两行的 DNS 为 `代理软件` 的 DNS。
- - 代理软件开启 `绕过大陆` ,即可完整体验分流与广告拦截。
+ - 代理软件关闭 `DNS 劫持`，开启 `绕过大陆` ,即可完整体验分流与广告拦截。
 
 ## 截图
 
