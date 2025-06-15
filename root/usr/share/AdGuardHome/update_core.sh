@@ -109,7 +109,7 @@ doupx(){
 	;;
 	esac
 	upx_latest_ver="$($downloader - https://api.github.com/repos/upx/upx/releases/latest 2>/dev/null|grep -E 'tag_name' |grep -E '[0-9.]+' -o 2>/dev/null)"
-	$downloader /tmp/upx-${upx_latest_ver}-${Arch}_linux.tar.xz "https://github.com/upx/upx/releases/download/v${upx_latest_ver}/upx-${upx_latest_ver}-${Arch}_linux.tar.xz" 2>&1
+	$downloader /tmp/upx-${upx_latest_ver}-${Arch}_linux.tar.xz "https://gh-proxy.net/github.com/upx/upx/releases/download/v${upx_latest_ver}/upx-${upx_latest_ver}-${Arch}_linux.tar.xz" 2>&1
 	#tar xvJf
 	which xz || (opkg list | grep ^xz || opkg update && opkg install xz) || (echo "xz download fail" && EXIT 1)
 	mkdir -p /tmp/upx-${upx_latest_ver}-${Arch}_linux

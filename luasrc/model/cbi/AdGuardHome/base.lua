@@ -52,8 +52,8 @@ o.template = "AdGuardHome/AdGuardHome_check"
 o.showfastconfig=(not fs.access(configpath))
 o.description=string.format(translate("core version:").."<strong><font id=\"updateversion\" color=\"green\">%s </font></strong>",e)
 ---- port warning not safe
-local port=luci.sys.exec("awk '/  port:/{printf($2);exit;}' "..configpath.." 2>nul")
-if (port=="") then port=translate("unknown") end
+local port=luci.sys.exec("awk '/^dns:/ {f=1} f && /^  port:/ {print $2; exit}' "..configpath.." 2>nul")
+if (port=="" or port==nil) then port=translate("unknown") end
 ---- Redirect
 o = s:option(ListValue, "redirect", translate("Redirect").." ("..translate("Port").." "..port..")", translate("AdGuardHome redirect mode"))
 o:value("none", translate("none"))
