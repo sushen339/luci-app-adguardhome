@@ -10,7 +10,7 @@ on:
 
 jobs:
   Get-Version:
-    runs-on: ubuntu-latest
+    runs-on: debian-11
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -26,7 +26,7 @@ jobs:
           echo "Current Makefile Version: $(grep 'PKG_VERSION:=' ./Makefile |awk -F ':=' '{print $2}')"
 
   Compile:
-    runs-on: ubuntu-latest
+    runs-on: debian-11
     needs: Get-Version
     steps:
       - name: Clone AdGuardHome Repository
